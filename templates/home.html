@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h2>Home Page</h2>
+<p>Welcome back, {{ account['patient_firstname'] }}!</p>
+
+<div class="image">
+    <h1>Submit your sample for Diagnosis</h1>
+    {% if image_path != None %}
+        <img src="/{{ image_path }}" alt="Italian Trulli" width="250" height="200">
+        <p style="color:green;">Diagnosis:{{ account['diagnosis'] }}</p>
+    {% endif %}
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('home') }}"> <!--action="/show_data"    -->
+        <input type="file" id="myFile" name="uploaded-file" accept=".jpg">
+        <input type="submit" value="Submit">
+    </form>
+    <p style="color:green;">{{ msg }}</p>
+
+</div>
+{% endblock %}
