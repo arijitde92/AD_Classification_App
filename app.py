@@ -4,14 +4,12 @@ import MySQLdb.cursors
 import re
 import os
 from werkzeug.utils import secure_filename
-
+from inference import test_main
 # *** Backend operation
 
 # WSGI Application
 # Defining upload folder path
 UPLOAD_FOLDER = os.path.join('static', 'Images')
-# # Define allowed files
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
 app = Flask(__name__)
 
@@ -20,14 +18,19 @@ app.secret_key = 'your secret key'
 
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'sql12.freemysqlhosting.net'
-app.config['MYSQL_USER'] = 'sql12607691'
-app.config['MYSQL_PASSWORD'] = '4FwHRIgU2j'
-app.config['MYSQL_DB'] = 'sql12607691'
+app.config['MYSQL_USER'] = 'sql12613930'
+app.config['MYSQL_PASSWORD'] = 'YBv6W6YXiB'
+app.config['MYSQL_DB'] = 'sql12613930'
 print(app.config)
 
 # Intialize MySQL
 mysql = MySQL(app)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Model Configurations
+app.config['MODEL_PATH'] = "Trained_Models"
+app.config['CLASS_MAP'] = {0: "Normal", 1: "EMCI", 2: "LMCI", 3: "AD"}
+
 
 # http://localhost:5000/pythinlogin/home - this will be the home page, only accessible for loggedin users
 @app.route('/pythonlogin/home',  methods=['GET', 'POST'])
@@ -74,7 +77,7 @@ def login():
         password = request.form['password']
         # Check if account exists using MySQL
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('SELECT * FROM patientData WHERE email = %s AND password = %s', (email, password))
+        cursor.execute('SELECT * FROM patientData WHERE email = %s AND passowrd = %s', (email, password))
         # Fetch one record and return result
         account = cursor.fetchone()
         # If account exists in accounts table in out database
@@ -161,6 +164,35 @@ def profile():
     return redirect(url_for('login'))
 
 
-if __name__ == "__main__":
+@app.route('/diagnose', methods=['POST'])
+def diagnose():
+    # Upload file flask
+    if request.method == 'POST':
+        uploaded_img = request.files['uploaded-file']
+        # Extracting uploaded data file name
+        img_filename = secure_filename(uploaded_img.filename)
+        # Upload file to database (defined uploaded folder in static path)
+        save_file_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename).replace("\\", "/")
+        uploaded_img.save(save_file_path)
+        email = session['email']
+        session['uploaded_img_file_path'] = save_file_path
+        # msg = 'You have successfully uploaded image!'
+        prediction, subject_name = test_main(save_file_path, app.config['MODEL_PATH'].replace("\\", "/"), app.config['CLASS_MAP'])
 
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        cursor.execute('UPDATE patientData SET image_path=%s where email=%s',
+                       (session['uploaded_img_file_path'], email))
+        cursor.execute('UPDATE patientData SET diagnosis=%s where email=%s',
+                       (app.config['CLASS_MAP'].get(prediction), email))
+        # Storing uploaded file path in flask session
+        mysql.connection.commit()
+        cursor.execute('SELECT * FROM patientData WHERE patient_id = %s', [session['id']])
+        account = cursor.fetchone()
+        if account['image_path'] is not None and account['image_path'] != '':
+            return render_template('home.html', account=account, image_path=account['image_path'])
+        else:
+            return render_template('home.html', account=None, image_path=None)
+
+
+if __name__ == "__main__":
     app.run(debug=True)

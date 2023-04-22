@@ -12,8 +12,8 @@
         <img src="/{{ image_path }}" alt="Italian Trulli" width="250" height="200">
         <p style="color:green;">Diagnosis:{{ account['diagnosis'] }}</p>
     {% endif %}
-    <form method="POST" enctype="multipart/form-data" action="{{ url_for('home') }}"> <!--action="/show_data"    -->
-        <input type="file" id="myFile" name="uploaded-file" accept=".jpg">
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('diagnose') }}"> <!--action="/show_data"    -->
+        <input type="file" id="myFile" name="uploaded-file" accept=".nii">
         <input type="submit" value="Submit">
     </form>
     <p style="color:green;">{{ msg }}</p>
