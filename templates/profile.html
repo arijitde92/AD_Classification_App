@@ -26,8 +26,11 @@
         <tr>
 
             <td>Diagnosis:</td>
-            <td if="${ account['diagnosis'] } == NULL">Please upload your sample file to check diagnosis</td>
-            <td if="${ account['diagnosis'] } != NULL">{{ account['diagnosis'] }}</td>
+            {% if account['diagnosis'] == NULL %}
+                <td>Please upload your sample file to check diagnosis</td>
+            {% else %}
+                <td>{{ account['diagnosis'] }}</td>
+            {% endif %}
         </tr>
     </table>
 </div>

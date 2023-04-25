@@ -5,15 +5,11 @@ create table patientData(patient_id int AUTO_INCREMENT PRIMARY KEY,
                          dob date not null,
                          gender char(1) CHECK (gender in('M','F','T')),
                          email varchar(50),
-                         passowrd varchar(100) unique not null,
-                         phone varchar(10),
-                         address varchar(200) not null,
+                         password varchar(100) unique not null,
+                         phone varchar(10) unique not null,
+                         image_path varchar(100) unique,
                          diagnosis varchar(7) check(diagnosis in ('Normal','EMCI','LMCI','AD')),
                          feedback varchar(100));
-
-ALTER TABLE sql6587939.patientData ADD image_path varchar(100) unique;
-ALTER TABLE sql6587939.patientData MODIFY COLUMN phone VARCHAR(10) unique not null;
-ALTER TABLE sql6587939.patientData DROP COLUMN address;
 						 
 UPDATE sql6587939.patientData set email='arijit@gmail.com',phone=8981800329 where patient_firstname='Arijit';
 					 
@@ -29,7 +25,6 @@ insert into patientData(patient_firstname,
 
 use sql12607691;
 UPDATE patientData set password='ari' where patient_firstname='Arijit';
-UPDATE patientData set password='ish' where patient_firstname='Ishita';
 
 install python 3.10.6
 pip install flask						 
