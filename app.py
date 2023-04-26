@@ -1,16 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_mysqldb import MySQL
-import MySQLdb.cursors
-import re
-import os
-from werkzeug.utils import secure_filename
 from inference import test_main
+import MySQLdb.cursors
+import os
+import re
+from werkzeug.utils import secure_filename
 # *** Backend operation
 
 # WSGI Application
-# Defining upload folder path
-UPLOAD_FOLDER = os.path.join('static', 'Images')
-
 app = Flask(__name__)
 
 # Change this to your secret key (can be anything, it's for extra protection)
@@ -25,12 +22,13 @@ print(app.config)
 
 # Intialize MySQL
 mysql = MySQL(app)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Set Upload folder path in app configuration
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'Images')
 
 # Model Configurations
 app.config['MODEL_PATH'] = "Trained_Models"
 app.config['CLASS_MAP'] = {0: "Normal", 1: "EMCI", 2: "LMCI", 3: "AD"}
-
 
 # http://localhost:5000/pythinlogin/home - this will be the home page, only accessible for loggedin users
 @app.route('/pythonlogin/home',  methods=['GET', 'POST'])
@@ -175,22 +173,27 @@ def diagnose():
         save_file_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename).replace("\\", "/")
         uploaded_img.save(save_file_path)
         email = session['email']
+        # Storing uploaded file path in flask session
         session['uploaded_img_file_path'] = save_file_path
-        # msg = 'You have successfully uploaded image!'
+
+        # Call the prediction method for classifying the uploaded data
         prediction, subject_name = test_main(save_file_path, app.config['MODEL_PATH'].replace("\\", "/"), app.config['CLASS_MAP'])
 
+        # Create mysql cursor to update the uploaded image path and diagnosis in MySQL DB
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('UPDATE patientData SET image_path=%s where email=%s',
                        (session['uploaded_img_file_path'], email))
         cursor.execute('UPDATE patientData SET diagnosis=%s where email=%s',
                        (app.config['CLASS_MAP'].get(prediction), email))
-        # Storing uploaded file path in flask session
         mysql.connection.commit()
+        # Get the diagnosed patient's image path to show in the website
+        # TODO: Add method to show animated GIF of all image slices of the 3D MRI data
+
         cursor.execute('SELECT * FROM patientData WHERE patient_id = %s', [session['id']])
         account = cursor.fetchone()
-        if account['image_path'] is not None and account['image_path'] != '':
+        if account['image_path'] is not None and account['image_path'] != '': # Image path found
             return render_template('home.html', account=account, image_path=account['image_path'])
-        else:
+        else:   # If image path does not exist
             return render_template('home.html', account=None, image_path=None)
 
 
