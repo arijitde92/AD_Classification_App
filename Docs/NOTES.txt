@@ -58,7 +58,7 @@ conda remove -n test_env --all
 MySQLdb.OperationalError: (2002, "Can't connect to server on 'localhost' (10061)")
 run phpmyadmin
 =============================================================================https://morioh.com/p/c61187faa9be
-sql:
+sql:http://www.phpmyadmin.co
 Server: sql6.freemysqlhosting.net
 Name: sql6587939
 Username: sql6587939
@@ -72,6 +72,11 @@ conda activate Desktop
 pip install python 3.10.6
 pip install flask
 pip install flask-mysqldb
+conda install -c pytorch pytorch
+pip install numpy
+pip install SimpleITK
+pip install torchinfo
+pip install Werkzeug
 
 cd C:\Users\ARIJIT\Desktop\Flask_App
 set FLASK_APP=main.py
@@ -87,3 +92,11 @@ flask run
 
 
 <Config {'ENV': 'production', 'DEBUG': False, 'TESTING': False, 'PROPAGATE_EXCEPTIONS': None, 'SECRET_KEY': 'your secret key', 'PERMANENT_SESSION_LIFETIME': datetime.timedelta(days=31), 'USE_X_SENDFILE': False, 'SERVER_NAME': None, 'APPLICATION_ROOT': '/', 'SESSION_COOKIE_NAME': 'session', 'SESSION_COOKIE_DOMAIN': None, 'SESSION_COOKIE_PATH': None, 'SESSION_COOKIE_HTTPONLY': True, 'SESSION_COOKIE_SECURE': False, 'SESSION_COOKIE_SAMESITE': None, 'SESSION_REFRESH_EACH_REQUEST': True, 'MAX_CONTENT_LENGTH': None, 'SEND_FILE_MAX_AGE_DEFAULT': None, 'TRAP_BAD_REQUEST_ERRORS': None, 'TRAP_HTTP_EXCEPTIONS': False, 'EXPLAIN_TEMPLATE_LOADING': False, 'PREFERRED_URL_SCHEME': 'http', 'JSON_AS_ASCII': None, 'JSON_SORT_KEYS': None, 'JSONIFY_PRETTYPRINT_REGULAR': None, 'JSONIFY_MIMETYPE': None, 'TEMPLATES_AUTO_RELOAD': None, 'MAX_COOKIE_SIZE': 4093, 'MYSQL_HOST': 'sql12.freemysqlhosting.net', 'MYSQL_USER': 'sql12607691', 'MYSQL_PASSWORD': '4FwHRIgU2j', 'MYSQL_DB': 'sql12607691'}>
+
+create table submissions(id int AUTO_INCREMENT PRIMARY KEY,
+                         patient_id int,
+                         upload_date date not null,
+                         image_path varchar(100) unique,
+                         diagnosis varchar(7) check(diagnosis in ('Normal','EMCI','LMCI','AD')));
+insert into submissions(patient_id,upload_date,image_path,diagnosis) values(1,'2023-12-23','c:pics/image','EMCI');
+insert into submissions(patient_id,upload_date,image_path,diagnosis) values(1,'2023-02-20','c:pics/image1','Normal');

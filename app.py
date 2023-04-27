@@ -1,67 +1,80 @@
-from flask import Flask, render_template, request, redirect, url_for, session
-from flask_mysqldb import MySQL
-from inference import test_main
+#!user/ishit/anaconda3/python3
+
+# Imports
 import MySQLdb.cursors
 import os
 import re
+from datetime import date
+from flask import Flask, render_template, request, redirect, url_for, session
+from flask_mysqldb import MySQL
+from inference import test_main
 from werkzeug.utils import secure_filename
-# *** Backend operation
 
-# WSGI Application
+
+# Initialize flask app
 app = Flask(__name__)
 
-# Change this to your secret key (can be anything, it's for extra protection)
-app.secret_key = 'your secret key'
+# Model Configurations
+app.config['MODEL_PATH'] = "Trained_Models"
+app.config['CLASS_MAP'] = {0: "Normal", 1: "EMCI", 2: "LMCI", 3: "AD"}
 
 # Enter your database connection details below
 app.config['MYSQL_HOST'] = 'sql12.freemysqlhosting.net'
 app.config['MYSQL_USER'] = 'sql12613930'
 app.config['MYSQL_PASSWORD'] = 'YBv6W6YXiB'
 app.config['MYSQL_DB'] = 'sql12613930'
-print(app.config)
 
-# Intialize MySQL
+# Initialize MySQL
 mysql = MySQL(app)
 
 # Set Upload folder path in app configuration
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'Images')
 
-# Model Configurations
-app.config['MODEL_PATH'] = "Trained_Models"
-app.config['CLASS_MAP'] = {0: "Normal", 1: "EMCI", 2: "LMCI", 3: "AD"}
+# Change this to your secret key (can be anything, it's for extra protection)
+app.secret_key = 'your secret key'
 
 # http://localhost:5000/pythinlogin/home - this will be the home page, only accessible for loggedin users
 @app.route('/pythonlogin/home',  methods=['GET', 'POST'])
 def home():
-    msg_diagnised=''
     # Check if user is loggedin
     if 'loggedin' in session:
-        print(session)
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('SELECT * FROM patientData WHERE patient_id = %s', [session['id']])
         account = cursor.fetchone()
-        if account['image_path'] is not None and account['image_path'] != '':
-            return render_template('home.html', account=account, image_path=account['image_path'])
+        headings = ("sr_no", "p_id", "date", "image", "diag")        
+        cursor1 = mysql.connection.cursor()
+        cursor1.execute('SELECT * FROM submissions where patient_id = %s', [session['id']])
+        data1 = cursor1.fetchall()
+        cursor.execute('SELECT * FROM submissions where patient_id = %s', [session['id']])
+        data = cursor.fetchone()
+        if data:
+            if data['image_path'] is not None and data['image_path'] != '':
+                return render_template('home.html', account=account, image_path=data['image_path'], headings=headings, data= data1) # atleast once image uploaded, submit not clciked
         # Upload file flask
         elif request.method == 'POST':
             uploaded_img = request.files['uploaded-file']
             # Extracting uploaded data file name
             img_filename = secure_filename(uploaded_img.filename)
-            # Upload file to database (defined uploaded folder in static path)
+            # Save file in location:app.config['UPLOAD_FOLDER']
             uploaded_img.save(os.path.join(app.config['UPLOAD_FOLDER'], img_filename).replace("\\", "/"))
-            email = session['email']
-            session['uploaded_img_file_path'] = os.path.join(app.config['UPLOAD_FOLDER'], img_filename).replace("\\", "/")
-            cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-            cursor.execute('UPDATE patientData SET image_path=%s where email=%s',
-                           (session['uploaded_img_file_path'], email))
             # Storing uploaded file path in flask session
-            mysql.connection.commit()
-            # msg = 'You have successfully uploaded image!'
-            return render_template('home.html', account=account, image_path=session['uploaded_img_file_path'])
-        return render_template('home.html', account=account, msg='', image_path=None)
+            session['uploaded_img_file_path'] = os.path.join(app.config['UPLOAD_FOLDER'], img_filename).replace("\\",
+                                                                                                                "/")
+
+            # cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+            # p_id = [session['id']]
+            # u_date = date.today()
+            # i_path = session['uploaded_img_file_path']
+            # cursor.execute(
+            #     'INSERT INTO submissions(patient_id,upload_date,image_path) VALUES (%s, %s, %s, %s)',
+            #     [p_id, u_date, i_path])
+            # mysql.connection.commit()
+            return render_template('home.html', account=account, image_path=session['uploaded_img_file_path']) #first time iamge upload by submiting
+        return render_template('home.html', account=account, msg='', image_path=None)  #no image ever submitted, submit not pressed
 
     # User is not loggedin redirect to login page
-    return redirect(url_for('login')) #function login
+    return redirect(url_for('login')) #redirects to function login
+
 
 # http://localhost:5000/pythonlogin/ - this will be the login page, we need to use both GET and POST requests
 @app.route('/', methods=['GET', 'POST'])
@@ -78,35 +91,36 @@ def login():
         cursor.execute('SELECT * FROM patientData WHERE email = %s AND passowrd = %s', (email, password))
         # Fetch one record and return result
         account = cursor.fetchone()
-        # If account exists in accounts table in out database
+        # If account exists in accounts table in our database
         if account:
             # Create session data, we can access this data in other routes
             session['loggedin'] = True
             session['id'] = account['patient_id']
             session['email'] = account['email']
             # Redirect to home page
-            # return 'Logged in successfully!'
             return redirect(url_for('home')) #takes session only to home page
         else:
-            # Account doesnt exist or firstname/password incorrect
+            # Account doesnt exist or email/password incorrect
             msg = 'Incorrect email/password!'
+
     # Show the login form with message (if any)
     return render_template('index.html', msg=msg)
+
 
 # http://localhost:5000/python/logout - this will be the logout page
 @app.route('/pythonlogin/logout')
 def logout():
-    # Remove session data, this will log the user out
+   # Remove session data, this will log the user out
    session.pop('loggedin', None)
    session.pop('id', None)
    session.pop('firstname', None)
    # Redirect to login page
    return redirect(url_for('login'))
 
+
 # http://localhost:5000/pythinlogin/register - this will be the registration page, we need to use both GET and POST requests
 @app.route('/pythonlogin/register', methods=['GET', 'POST'])
 def register():
-    # Output message if something goes wrong...
     msg = ''
     # Check if "firstname", "password" and "email" POST requests exist (user submitted form)
     if request.method == 'POST' and 'firstname' in request.form and 'lastname' in request.form and 'dob' in request.form and 'email' in request.form and 'password' in request.form and 'phone' in request.form:
@@ -118,7 +132,6 @@ def register():
         email = request.form['email']
         password = request.form['password']
         phone = request.form['phone']
-        # address = request.form['address']
         # Check if account exists using MySQL
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('SELECT * FROM patientData WHERE email = %s', [email])
@@ -135,16 +148,18 @@ def register():
         elif not email or not password or not phone:
             msg = 'Please fill out the form!'
         else:
-            # Account doesnt exists and the form data is valid, now insert new account into accounts table
-            cursor.execute('INSERT INTO patientData(patient_firstname,patient_lastname,dob,gender,email,password,phone) VALUES (%s, %s, %s, %s, %s, %s, %s)', (firstname,lastname,dob,gender,email,password,phone))
+            # Account does not exist and the form data is valid, now insert new account into accounts table
+            cursor.execute('INSERT INTO patientData(patient_firstname,patient_lastname,dob,gender,email,passowrd,phone) VALUES (%s, %s, %s, %s, %s, %s, %s)', [firstname,lastname,dob,gender,email,password,phone])
             mysql.connection.commit()
             msg = 'You have successfully registered!'
             return render_template('index.html', msg=msg)
     elif request.method == 'POST':
         # Form is empty... (no POST data)
         msg = 'Please fill out the form!'
+
     # Show registration form with message (if any)
     return render_template('register.html', msg=msg)
+
 
 # http://localhost:5000/pythinlogin/profile - this will be the profile page, only accessible for loggedin users
 @app.route('/pythonlogin/profile')
@@ -155,9 +170,12 @@ def profile():
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('SELECT * FROM patientData WHERE patient_id = %s', [session['id']])
         account = cursor.fetchone()
+        cursor.execute('SELECT * FROM submissions WHERE patient_id = %s', [session['id']])
+        data = cursor.fetchone()
+        
         # Show the profile page with account info
+        return render_template('profile.html', account=account, data=data)
 
-        return render_template('profile.html', account=account)
     # User is not loggedin redirect to login page
     return redirect(url_for('login'))
 
@@ -172,29 +190,37 @@ def diagnose():
         # Upload file to database (defined uploaded folder in static path)
         save_file_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename).replace("\\", "/")
         uploaded_img.save(save_file_path)
-        email = session['email']
-        # Storing uploaded file path in flask session
-        session['uploaded_img_file_path'] = save_file_path
 
-        # Call the prediction method for classifying the uploaded data
+        session['uploaded_img_file_path'] = save_file_path
         prediction, subject_name = test_main(save_file_path, app.config['MODEL_PATH'].replace("\\", "/"), app.config['CLASS_MAP'])
 
-        # Create mysql cursor to update the uploaded image path and diagnosis in MySQL DB
+        # For Displaying Patient name
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-        cursor.execute('UPDATE patientData SET image_path=%s where email=%s',
-                       (session['uploaded_img_file_path'], email))
-        cursor.execute('UPDATE patientData SET diagnosis=%s where email=%s',
-                       (app.config['CLASS_MAP'].get(prediction), email))
-        mysql.connection.commit()
-        # Get the diagnosed patient's image path to show in the website
-        # TODO: Add method to show animated GIF of all image slices of the 3D MRI data
-
-        cursor.execute('SELECT * FROM patientData WHERE patient_id = %s', [session['id']])
+        cursor.execute('select * from patientData where patient_id=%s',[session['id']])
         account = cursor.fetchone()
-        if account['image_path'] is not None and account['image_path'] != '': # Image path found
-            return render_template('home.html', account=account, image_path=account['image_path'])
-        else:   # If image path does not exist
-            return render_template('home.html', account=None, image_path=None)
+
+        # Insert into submissions table in database
+        cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+        p_id = [session['id']]
+        u_date = date.today()
+        i_path = session['uploaded_img_file_path']
+        cursor.execute(
+            'INSERT INTO submissions(patient_id,upload_date,image_path,diagnosis) VALUES (%s, %s, %s, %s)',
+            [p_id, u_date, i_path, app.config['CLASS_MAP'].get(prediction)])
+        mysql.connection.commit()
+        cursor.execute('SELECT * FROM submissions WHERE patient_id = %s', [session['id']])
+        data = cursor.fetchone()
+
+        # for dispalying submissions table content
+        headings = ("sr_no", "p_id", "date", "image", "diag")
+        cursor1 = mysql.connection.cursor()
+        cursor1.execute('SELECT * FROM submissions where patient_id = %s', [session['id']])
+        data1 = cursor1.fetchall()
+
+        if data['image_path'] is not None and data['image_path'] != '':
+            return render_template('home.html', account=account, image_path=data['image_path'], headings=headings, data=data1)
+        else:
+            return render_template('home.html', account=account, image_path=None, headings=headings, data=data1)
 
 
 if __name__ == "__main__":

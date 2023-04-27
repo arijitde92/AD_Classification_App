@@ -3,8 +3,8 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<h2>Home Page</h2>
-<p>Welcome back, {{ account['patient_firstname'] }}!</p>
+
+<h2>Welcome back, {{ account['patient_firstname'] }}!</h2>
 
 <div class="image">
     <h1>Submit your sample for Diagnosis</h1>
@@ -17,6 +17,26 @@
         <input type="submit" value="Submit">
     </form>
     <p style="color:green;">{{ msg }}</p>
+</div>
+<div>
+    <table>
+        <thead>
+        <tr>
+            {% for header in headings %}
+            <th>{{header}}</th>
+            {% endfor %}
+        </tr>
+        </thead>
 
+        {% for row in data %}
+        <tbody>
+        <tr>
+            {% for cell in row %}
+            <th>{{cell}}</th>
+            {% endfor %}
+        </tr></tbody>
+
+        {% endfor %}
+    </table>
 </div>
 {% endblock %}
