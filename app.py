@@ -14,10 +14,6 @@ from werkzeug.utils import secure_filename
 # Initialize flask app
 app = Flask(__name__)
 
-# Defining upload folder path
-UPLOAD_FOLDER = os.path.join('static', 'Images')
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
 # Model Configurations
 app.config['MODEL_PATH'] = "Trained_Models"
 app.config['CLASS_MAP'] = {0: "Normal", 1: "EMCI", 2: "LMCI", 3: "AD"}
@@ -31,9 +27,11 @@ app.config['MYSQL_DB'] = 'sql12613930'
 # Initialize MySQL
 mysql = MySQL(app)
 
+# Set Upload folder path in app configuration
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'Images')
+
 # Change this to your secret key (can be anything, it's for extra protection)
 app.secret_key = 'your secret key'
-
 
 # http://localhost:5000/pythinlogin/home - this will be the home page, only accessible for loggedin users
 @app.route('/pythonlogin/home',  methods=['GET', 'POST'])
@@ -43,10 +41,7 @@ def home():
         cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
         cursor.execute('SELECT * FROM patientData WHERE patient_id = %s', [session['id']])
         account = cursor.fetchone()
-        headings = ("sr_no", "p_id", "date", "image", "diag")
-        # data = (("1", "1", "12-04", "image", "diag"),
-        #       ("2", "1", "12-04", "image", "diag"),
-        #     ("3", "1", "12-04", "image", "diag"))
+        headings = ("sr_no", "p_id", "date", "image", "diag")        
         cursor1 = mysql.connection.cursor()
         cursor1.execute('SELECT * FROM submissions where patient_id = %s', [session['id']])
         data1 = cursor1.fetchall()
@@ -177,7 +172,7 @@ def profile():
         account = cursor.fetchone()
         cursor.execute('SELECT * FROM submissions WHERE patient_id = %s', [session['id']])
         data = cursor.fetchone()
-        print(data)
+        
         # Show the profile page with account info
         return render_template('profile.html', account=account, data=data)
 
@@ -195,6 +190,7 @@ def diagnose():
         # Upload file to database (defined uploaded folder in static path)
         save_file_path = os.path.join(app.config['UPLOAD_FOLDER'], img_filename).replace("\\", "/")
         uploaded_img.save(save_file_path)
+
         session['uploaded_img_file_path'] = save_file_path
         prediction, subject_name = test_main(save_file_path, app.config['MODEL_PATH'].replace("\\", "/"), app.config['CLASS_MAP'])
 
