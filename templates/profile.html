@@ -26,10 +26,10 @@
         <tr>
 
             <td>Diagnosis:</td>
-            {% if account['diagnosis'] == NULL %}
+            {% if data['diagnosis'] == NULL %}
                 <td>Please upload your sample file to check diagnosis</td>
             {% else %}
-                <td>{{ account['diagnosis'] }}</td>
+                <td>{{ data['diagnosis'] }}</td>
             {% endif %}
         </tr>
     </table>
