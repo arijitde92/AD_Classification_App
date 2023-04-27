@@ -83,8 +83,8 @@ class RadiologyDataset(Dataset):
     Returns:
         None.
     """
-    self.image_paths = image_paths
-    self.labels = labels
+        self.image_paths = image_paths
+        self.labels = labels
 
     def __len__(self):
         """
