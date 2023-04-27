@@ -16,7 +16,7 @@
         <input type="file" id="myFile" name="uploaded-file" accept=".nii">
         <input type="submit" value="Submit">
     </form>
-    <p style="color:green;">{{ msg }}</p>
+    <p style="color:red;">{{ msg }}</p>
 </div>
 <div>
     <table>
@@ -27,7 +27,6 @@
             {% endfor %}
         </tr>
         </thead>
-
         {% for row in data %}
         <tbody>
         <tr>
@@ -35,7 +34,6 @@
             <th>{{cell}}</th>
             {% endfor %}
         </tr></tbody>
-
         {% endfor %}
     </table>
 </div>

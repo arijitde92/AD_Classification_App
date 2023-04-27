@@ -204,9 +204,13 @@ def diagnose():
         p_id = [session['id']]
         u_date = date.today()
         i_path = session['uploaded_img_file_path']
-        cursor.execute(
-            'INSERT INTO submissions(patient_id,upload_date,image_path,diagnosis) VALUES (%s, %s, %s, %s)',
-            [p_id, u_date, i_path, app.config['CLASS_MAP'].get(prediction)])
+        msg = ''
+        try:
+            cursor.execute(
+                'INSERT INTO submissions(patient_id,upload_date,image_path,diagnosis) VALUES (%s, %s, %s, %s)',
+                [p_id, u_date, i_path, app.config['CLASS_MAP'].get(prediction)])
+        except:
+            msg = 'Duplicate Image name. Please select a different image'
         mysql.connection.commit()
         cursor.execute('SELECT * FROM submissions WHERE patient_id = %s', [session['id']])
         data = cursor.fetchone()
@@ -216,11 +220,10 @@ def diagnose():
         cursor1 = mysql.connection.cursor()
         cursor1.execute('SELECT * FROM submissions where patient_id = %s', [session['id']])
         data1 = cursor1.fetchall()
-
         if data['image_path'] is not None and data['image_path'] != '':
-            return render_template('home.html', account=account, image_path=data['image_path'], headings=headings, data=data1)
+            return render_template('home.html', account=account, image_path=data['image_path'], headings=headings, data=data1, msg=msg)
         else:
-            return render_template('home.html', account=account, image_path=None, headings=headings, data=data1)
+            return render_template('home.html', account=account, image_path=None, headings=headings, data=data1, msg=msg)
 
 
 if __name__ == "__main__":
